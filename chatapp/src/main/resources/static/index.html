@@ -1,0 +1,253 @@
+<!-- Main Application -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Time Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        #joinForm, #chatSection {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        #joinForm h2, #chatSection h1 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #usernameInput {
+            width: 95%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        #joinForm button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #joinForm button:hover {
+            background-color: #218838;
+        }
+
+        #chatSection {
+            display: none;
+            flex-direction: column;
+            max-width: 400px;
+            width: 40%;
+        }
+
+        #chat {
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: 400px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        #messageInput {
+            width: calc(100% - 80px);
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        #sendButton {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #sendButton:hover {
+            background-color: #0069d9;
+        }
+
+        #leaveButton {
+            background-color: #dc3545;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            margin-top: 10px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        #leaveButton:hover {
+            background-color: #c82333;
+        }
+
+        .message {
+            padding: 5px 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            max-width: 70%;
+        }
+
+        .message.user-join,
+        .message.user-leave {
+            background-color: #d4edda;
+            color: #155724;
+            text-align: center;
+            width: 95%;
+            max-width: 100%;
+            align-items: center;
+        }
+
+        .message.user-leave {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .message.sent {
+            background-color: #e9ecef;
+            align-self: flex-end;
+        }
+
+        .message.received {
+            background-color: #f8d7da;
+            align-self: flex-start;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 600px) {
+            #chatSection {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="joinForm">
+        <h2>Enter Your Name to Join the Chat</h2>
+        <input type="text" id="usernameInput" placeholder="Your name" />
+        <button onclick="joinChat()">Join Chat</button>
+    </div>
+
+    <div id="chatSection">
+        <h1>Real Time Chat</h1>
+        <div id="chat"></div>
+        <div style="display: flex;">
+            <input type="text" id="messageInput" placeholder="Type a message..." />
+            <button id="sendButton" onclick="sendMessage()">Send</button>
+        </div>
+        <button id="leaveButton" onclick="leaveChat()">Leave Chat</button>
+    </div>
+
+    <script>
+        let userName = '';
+        let stompClient = null;
+
+        function joinChat() {
+            userName = document.getElementById('usernameInput').value.trim();
+            if (userName) {
+                document.getElementById('joinForm').style.display = 'none';
+                document.getElementById('chatSection').style.display = 'flex';
+                connectWebSocket();
+            }
+        }
+
+        function leaveChat() {
+            if (stompClient && stompClient.connected) {
+                sendLeaveNotification();
+                stompClient.disconnect(function () {
+                    console.log('Disconnected');
+                });
+            }
+            document.getElementById('chatSection').style.display = 'none';
+            document.getElementById('joinForm').style.display = 'block';
+        }
+
+        function connectWebSocket() {
+            const socket = new SockJS('/chat');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function (frame) {
+                stompClient.subscribe('/topic/messages', function (response) {
+                    const chatMessage = JSON.parse(response.body);
+                    showMessage(chatMessage);
+                });
+                sendJoinNotification(); // notify when user joins
+            });
+        }
+
+        function sendJoinNotification() {
+            const joinMessage = {
+                type: 'JOIN',
+                sender: userName,
+                content: `${userName} joined the chat!`
+            };
+            stompClient.send("/app/send", {}, JSON.stringify(joinMessage));
+        }
+
+        function sendLeaveNotification() {
+            const leaveMessage = {
+                type: 'LEAVE',
+                sender: userName,
+                content: `${userName} left the chat.`
+            };
+            stompClient.send("/app/send", {}, JSON.stringify(leaveMessage));
+        }
+
+        function sendMessage() {
+            const messageContent = document.getElementById('messageInput').value.trim();
+            if (messageContent && stompClient) {
+                const chatMessage = {
+                    type: 'CHAT',
+                    sender: userName,
+                    content: messageContent
+                };
+                stompClient.send("/app/send", {}, JSON.stringify(chatMessage));
+                document.getElementById('messageInput').value = '';
+            }
+        }
+
+        function showMessage(message) {
+            const chat = document.getElementById('chat');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            if (message.type === 'JOIN') {
+                messageElement.classList.add('user-join');
+                messageElement.textContent = `${message.sender} joined the chat!`;
+            } else if (message.type === 'LEAVE') {
+                messageElement.classList.add('user-leave');
+                messageElement.textContent = `${message.sender} left the chat.`;
+            } else {
+                messageElement.textContent = `${message.sender}: ${message.content}`;
+            }
+            chat.appendChild(messageElement);
+            chat.scrollTop = chat.scrollHeight; // auto scroll to buttom
+        }
+    </script>
+</body>
+</html>
