@@ -1,4 +1,4 @@
-# Real Time Chat using SpringBoot in Java
+# Real Time Chat using SpringBoot and WebSocket in Java
 
 ## Features
 - Run the application in console: `./mnw spring-boot:run`
@@ -17,7 +17,7 @@
 
 Here is a GIF demonstrating the key features of the application:
 
-![Demo Video](https://github.com/marius2347/Drawing-Application-in-Java-using-Swing/blob/main/video.gif)
+![Demo Video](https://github.com/marius2347/Real-Time-Chat-using-Spring-Boot-and-Websocket-in-Java/blob/main/video.gif)
 
 > Note: The GIF may take some time to load due to its size.
 
