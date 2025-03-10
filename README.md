@@ -8,10 +8,7 @@
 - Simple User Interface: An easy-to-navigate interface allows users to quickly enter their name, join the chat, send messages, and leave.
 - Message Display: Chat messages are displayed in a clear and organized manner, with different styles for user join/leave notifications and regular messages.
 - Cross-Browser Compatibility: The application works seamlessly across modern web browsers, ensuring a wide range of accessibility.
-
-## Acknowledgments
-
-**Java**: [http://bit.ly/java-certifications](http://bit.ly/java-certifications)  
+ 
 
 ## Demo Video
 
